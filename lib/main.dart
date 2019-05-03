@@ -1,111 +1,129 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; //Convertir Json
 
-void main() => runApp(MyApp());
+import './models/movieModel.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+const baseUrl = "https://api.themoviedb.org/3/movie/";
+const baseImagesUrl = "http://image.tmdb.org/t/p/";
+const apiKey = "b20e0f236dee8a9c37b4e7e3ba4d4e20";
+
+const nowPlayingUrl = "${baseUrl}now_playing?api_key=$apiKey";
+
+void main() => runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Movie App',
+      theme: ThemeData.dark(),
+      home: MyMovieApp(),
+    ));
+
+class MyMovieApp extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+  _MyMovieApp createState() => new _MyMovieApp();
+}
+
+class _MyMovieApp extends State<MyMovieApp> {
+  Movie nowPlayingMovies;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNowPlayingMovies();
   }
-}
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
+  void _fetchNowPlayingMovies() async {
+    var response = await http.get(nowPlayingUrl);
+    var decodeJson = jsonDecode(response.body);
+    //LLama de nuevo al build para actulizar la interfaz de usuario
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      nowPlayingMovies = Movie.fromJson(decodeJson);
     });
   }
 
+  Widget _buildCarouselSlider() => CarouselSlider(
+        items: nowPlayingMovies.results
+            .map((movieItem) =>
+                Image.network("${baseImagesUrl}w342${movieItem.posterPath}"))
+            .toList(),
+        autoPlay: false,
+        height: 240.0,
+        viewportFraction: 0.5,
+      );
+
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
-            ),
-          ],
+        elevation: 0.0,
+        title: Text(
+          'Movies',
+          style: TextStyle(
+              color: Colors.white, fontSize: 14.0, fontWeight: FontWeight.bold),
         ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.menu),
+          onPressed: () {},
+        ),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {},
+          )
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return <Widget>[
+            SliverAppBar(
+              title: Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    'NOW PLAYING',
+                    style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 12.0,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              expandedHeight: 290.0,
+              floating: false,
+              pinned: true,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  children: <Widget>[
+                    Container(
+                      child: Image.network(
+                          "${baseImagesUrl}w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+                          fit: BoxFit.cover,
+                          width: 1000.0,
+                          colorBlendMode: BlendMode.dstATop,
+                          color: Colors.blue.withOpacity(0.5)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 35.0),
+                      child: Column(
+                        children: nowPlayingMovies == null ? 
+                        <Widget>[
+                          Center(child: CircularProgressIndicator())
+                        ] 
+                        : 
+                        <Widget>[
+                          _buildCarouselSlider()
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            )
+          ];
+        },
+        body: Center(child: Text('Scroll')),
+      ),
     );
   }
 }
